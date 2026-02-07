@@ -1,0 +1,25 @@
+{
+  "name": "@nanobanana-pro/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@better-auth/expo": "catalog:",
+    "@nanobanana-pro/db": "workspace:*",
+    "@nanobanana-pro/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@nanobanana-pro/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

@@ -1,0 +1,3 @@
+{
+  "extends": "@nanobanana-pro/config/tsconfig.base.json"
+}
