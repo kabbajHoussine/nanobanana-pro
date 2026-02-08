@@ -38,3 +38,19 @@ export function getElementByHandle(handle: string): Element | undefined {
 export function handleExists(handle: string): boolean {
   return getElements().some((e) => e.handle === handle);
 }
+
+export async function migrateElementsToDatabase(
+  createElement: (data: { handle: string; base64Image: string }) => Promise<unknown>
+): Promise<void> {
+  const elements = getElements();
+  if (elements.length === 0) return;
+
+  for (const el of elements) {
+    await createElement({
+      handle: el.handle,
+      base64Image: el.base64,
+    });
+  }
+  // Clear localStorage after migration
+  localStorage.removeItem(STORAGE_KEY);
+}

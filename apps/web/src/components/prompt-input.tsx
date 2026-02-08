@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { Element } from "@/utils/elements";
-import { getElements } from "@/utils/elements";
 import { Paperclip, X } from "lucide-react";
+
+// Extended element type that can have either base64 (localStorage) or imageUrl (API)
+type PromptElement = Element & { imageUrl?: string };
 
 interface PromptInputProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
   onFileUpload: (base64: string) => void;
-  elements: Element[];
+  elements: PromptElement[];
   uploadedFiles: string[];
   onRemoveFile: (index: number) => void;
   isGenerating: boolean;
@@ -93,8 +95,16 @@ export function PromptInput({
     }
   };
 
+  // Helper to get image source for an element
+  const getImageSrc = (element: PromptElement): string => {
+    if (element.imageUrl) {
+      return element.imageUrl;
+    }
+    return `data:image/png;base64,${element.base64}`;
+  };
+
   // Select an element from dropdown
-  const selectElement = (element: Element) => {
+  const selectElement = (element: PromptElement) => {
     const textBeforeCursor = value.slice(0, cursorPosition);
     const lastAtIndex = textBeforeCursor.lastIndexOf("@");
     const textBeforeAt = value.slice(0, lastAtIndex);
@@ -147,7 +157,7 @@ export function PromptInput({
               }`}
             >
               <img
-                src={`data:image/png;base64,${element.base64}`}
+                src={getImageSrc(element)}
                 alt={element.handle}
                 className="w-8 h-8 rounded object-cover"
               />

@@ -4,7 +4,7 @@ import { orpc } from "@/utils/orpc";
 import type { AspectRatio, Quality } from "@/utils/resolutions";
 import { getResolution } from "@/utils/resolutions";
 import type { Element } from "@/utils/elements";
-import { getElements, getElementByHandle } from "@/utils/elements";
+import { useElements, type ApiElement } from "@/hooks/use-elements";
 import { parsePromptForElements } from "@/utils/prompt-parser";
 import type { GeneratedImage } from "@/utils/history";
 import { getHistory, saveToHistory } from "@/utils/history";
@@ -13,13 +13,29 @@ import { AspectRatioPicker } from "./aspect-ratio-picker";
 import { ElementsModal } from "./elements-modal";
 import { ImageLightbox } from "./image-lightbox";
 import { GenerationHistory } from "./generation-history";
-import { Sparkles, LayoutGrid } from "lucide-react";
+import { Sparkles, LayoutGrid, Loader2 } from "lucide-react";
+
+// Helper to fetch image from URL and convert to base64
+async function fetchImageAsBase64(imageUrl: string): Promise<string> {
+  const response = await fetch(imageUrl);
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      // Remove data URL prefix
+      const base64Data = base64.split(",")[1] || base64;
+      resolve(base64Data);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
 
 export function ImageGenerator() {
   const [prompt, setPrompt] = useState("");
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("16:9");
   const [quality, setQuality] = useState<Quality>("standard");
-  const [elements, setElements] = useState<Element[]>([]);
   const [isElementsModalOpen, setIsElementsModalOpen] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [history, setHistory] = useState<GeneratedImage[]>([]);
@@ -27,9 +43,11 @@ export function ImageGenerator() {
     null
   );
 
-  // Load elements and history on mount
+  // Load elements from API
+  const { elements, isLoading } = useElements();
+
+  // Load history on mount
   useEffect(() => {
-    setElements(getElements());
     setHistory(getHistory());
   }, []);
 
@@ -55,10 +73,17 @@ export function ImageGenerator() {
     const { cleanedPrompt, references } = parsePromptForElements(prompt);
     const inputImages: string[] = [];
 
-    // Collect base64 from elements
+    // Collect base64 from elements by fetching from their imgbb URLs
     for (const ref of references) {
-      const element = getElementByHandle(ref.handle);
-      if (element) inputImages.push(element.base64);
+      const element = elements.find((e: ApiElement) => e.handle === ref.handle);
+      if (element) {
+        try {
+          const base64 = await fetchImageAsBase64(element.imageUrl);
+          inputImages.push(base64);
+        } catch (err) {
+          console.error(`Failed to fetch image for ${ref.handle}:`, err);
+        }
+      }
     }
 
     // Add manual uploads
@@ -79,9 +104,12 @@ export function ImageGenerator() {
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleElementsChange = () => {
-    setElements(getElements());
-  };
+  // Map API elements to the format expected by PromptInput
+  const promptInputElements: Element[] = elements.map((el: ApiElement) => ({
+    handle: el.handle,
+    base64: "", // Not used for display, PromptInput will need updating
+    createdAt: new Date(el.createdAt).getTime(),
+  }));
 
   return (
     <div className="min-h-screen flex flex-col bg-neutral-50 dark:bg-neutral-950">
@@ -126,7 +154,7 @@ export function ImageGenerator() {
                   onChange={setPrompt}
                   onSubmit={handleGenerate}
                   onFileUpload={handleFileUpload}
-                  elements={elements}
+                  elements={promptInputElements}
                   uploadedFiles={uploadedFiles}
                   onRemoveFile={handleRemoveFile}
                   isGenerating={generateMutation.isPending}
@@ -147,7 +175,6 @@ export function ImageGenerator() {
       <ElementsModal
         isOpen={isElementsModalOpen}
         onClose={() => setIsElementsModalOpen(false)}
-        onElementsChange={handleElementsChange}
       />
 
       <ImageLightbox

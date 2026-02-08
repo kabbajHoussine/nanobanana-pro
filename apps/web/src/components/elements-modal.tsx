@@ -1,12 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import type { Element } from "@/utils/elements";
-import {
-  getElements,
-  saveElement,
-  deleteElement,
-  handleExists,
-} from "@/utils/elements";
-import { X, Trash2, Plus, Upload, AlertCircle } from "lucide-react";
+import { useElements, type ApiElement } from "@/hooks/use-elements";
+import { X, Trash2, Plus, Upload, AlertCircle, Loader2 } from "lucide-react";
 
 interface ElementsModalProps {
   isOpen: boolean;
@@ -21,17 +15,16 @@ export function ElementsModal({
   onClose,
   onElementsChange,
 }: ElementsModalProps) {
+  const { elements, isLoading, createElement, deleteElement, isCreating, isDeleting } = useElements();
   const [view, setView] = useState<View>("grid");
-  const [elements, setElements] = useState<Element[]>([]);
   const [uploadFile, setUploadFile] = useState<string | null>(null);
   const [handle, setHandle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load elements when modal opens
+  // Reset view when modal opens
   useEffect(() => {
     if (isOpen) {
-      setElements(getElements());
       setView("grid");
       setUploadFile(null);
       setHandle("");
@@ -56,8 +49,13 @@ export function ElementsModal({
     e.target.value = "";
   };
 
+  // Check if handle already exists in current elements
+  const handleExists = (checkHandle: string): boolean => {
+    return elements.some((e: ApiElement) => e.handle === checkHandle);
+  };
+
   // Handle saving new element
-  const handleSave = () => {
+  const handleSave = async () => {
     setError(null);
 
     // Validate handle
@@ -72,10 +70,10 @@ export function ElementsModal({
       ? trimmedHandle
       : `@${trimmedHandle}`;
 
-    // Check for valid handle format (alphanumeric only after @)
-    const handleRegex = /^@[\w]+$/;
+    // Check for valid handle format (alphanumeric and underscores only after @)
+    const handleRegex = /^@[\w-]+$/;
     if (!handleRegex.test(finalHandle)) {
-      setError("Handle must contain only letters, numbers, and underscores");
+      setError("Handle must contain only letters, numbers, underscores, and hyphens");
       return;
     }
 
@@ -90,26 +88,32 @@ export function ElementsModal({
       return;
     }
 
-    // Save element
-    saveElement({
-      handle: finalHandle,
-      base64: uploadFile,
-    });
+    try {
+      // Save element via API
+      await createElement({
+        handle: finalHandle,
+        base64Image: uploadFile,
+      });
 
-    // Refresh list and go back to grid
-    setElements(getElements());
-    setView("grid");
-    setUploadFile(null);
-    setHandle("");
-    onElementsChange?.();
+      // Go back to grid
+      setView("grid");
+      setUploadFile(null);
+      setHandle("");
+      onElementsChange?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save element");
+    }
   };
 
   // Handle deleting an element
-  const handleDelete = (elementHandle: string) => {
+  const handleDelete = async (elementId: string, elementHandle: string) => {
     if (confirm(`Are you sure you want to delete ${elementHandle}?`)) {
-      deleteElement(elementHandle);
-      setElements(getElements());
-      onElementsChange?.();
+      try {
+        await deleteElement({ id: elementId });
+        onElementsChange?.();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to delete element");
+      }
     }
   };
 
@@ -153,7 +157,11 @@ export function ElementsModal({
           {view === "grid" ? (
             <>
               {/* Grid View */}
-              {elements.length === 0 ? (
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                </div>
+              ) : elements.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 mx-auto mb-4 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center">
                     <Upload className="w-8 h-8 text-neutral-400" />
@@ -176,13 +184,13 @@ export function ElementsModal({
                 <>
                   {/* Elements Grid */}
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 mb-6">
-                    {elements.map((element) => (
+                    {elements.map((element: ApiElement) => (
                       <div
-                        key={element.handle}
+                        key={element.id}
                         className="group relative aspect-square bg-neutral-100 dark:bg-neutral-800 rounded-lg overflow-hidden"
                       >
                         <img
-                          src={`data:image/png;base64,${element.base64}`}
+                          src={element.imageUrl}
                           alt={element.handle}
                           className="w-full h-full object-cover"
                         />
@@ -193,8 +201,9 @@ export function ElementsModal({
                         </div>
                         <button
                           type="button"
-                          onClick={() => handleDelete(element.handle)}
-                          className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                          onClick={() => handleDelete(element.id, element.handle)}
+                          disabled={isDeleting}
+                          className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 disabled:opacity-50"
                         >
                           <Trash2 className="w-3 h-3" />
                         </button>
@@ -273,8 +282,10 @@ export function ElementsModal({
                   <button
                     type="button"
                     onClick={handleSave}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    disabled={isCreating}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
+                    {isCreating && <Loader2 className="w-4 h-4 animate-spin" />}
                     Save Element
                   </button>
                 </div>
