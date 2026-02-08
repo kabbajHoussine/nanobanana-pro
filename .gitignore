@@ -8,6 +8,9 @@ dist
 build
 *.tsbuildinfo
 
+# Specs of the project
+specs
+
 # Environment variables
 .env
 .env*.local

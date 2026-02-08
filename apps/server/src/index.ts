@@ -1,5 +1,5 @@
 import { devToolsMiddleware } from "@ai-sdk/devtools";
-import { google } from "@ai-sdk/google";
+import { togetherai } from "@ai-sdk/togetherai";
 import { cors } from "@elysiajs/cors";
 import { createContext } from "@nanobanana-pro/api/context";
 import { appRouter } from "@nanobanana-pro/api/routers/index";
@@ -33,7 +33,7 @@ const apiHandler = new OpenAPIHandler(appRouter, {
   ],
 });
 
-const app = new Elysia()
+new Elysia()
   .use(
     cors({
       origin: env.CORS_ORIGIN,
@@ -64,10 +64,11 @@ const app = new Elysia()
     return response ?? new Response("Not Found", { status: 404 });
   })
   .post("/ai", async (context) => {
-    const body = await context.request.json();
+    const body = (await context.request.json()) as { messages: any[] };
     const uiMessages = body.messages || [];
+
     const model = wrapLanguageModel({
-      model: google("gemini-2.5-flash"),
+      model: togetherai("zai-org/GLM-4.7"),
       middleware: devToolsMiddleware(),
     });
     const result = streamText({

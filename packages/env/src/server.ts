@@ -7,8 +7,11 @@ export const env = createEnv({
     DATABASE_URL: z.string().min(1),
     BETTER_AUTH_SECRET: z.string().min(32),
     BETTER_AUTH_URL: z.url(),
+    TOGETHER_AI_API_KEY: z.string(),
     CORS_ORIGIN: z.url(),
-    NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+    NODE_ENV: z
+      .enum(["development", "production", "test"])
+      .default("development"),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

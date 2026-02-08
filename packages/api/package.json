@@ -11,6 +11,7 @@
   },
   "scripts": {},
   "dependencies": {
+    "@ai-sdk/togetherai": "^2.0.31",
     "@nanobanana-pro/auth": "workspace:*",
     "@nanobanana-pro/db": "workspace:*",
     "@nanobanana-pro/env": "workspace:*",
@@ -19,6 +20,7 @@
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
     "@types/pg": "catalog:",
+    "ai": "catalog:",
     "dotenv": "catalog:",
     "drizzle-orm": "catalog:",
     "zod": "catalog:"

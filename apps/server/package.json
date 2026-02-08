@@ -12,6 +12,7 @@
   "dependencies": {
     "@ai-sdk/devtools": "^0.0.2",
     "@ai-sdk/google": "^3.0.1",
+    "@ai-sdk/togetherai": "^2.0.31",
     "@elysiajs/cors": "^1.4.1",
     "@nanobanana-pro/api": "workspace:*",
     "@nanobanana-pro/auth": "workspace:*",
@@ -20,6 +21,7 @@
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
+    "@sinclair/typebox": "^0.34.48",
     "ai": "catalog:",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
